@@ -54,7 +54,8 @@ head(intervalData)
 ## 5       20 0.0754717
 ## 6       25 2.0943396
 ```
-These data sets will be useful for us to answer the questions of this assignment.
+These data sets will be useful for us to answer the questions of this assignment. 
+Pay attention: the *aggregate()* function has *na.omit* option as default. So we must not do anything with NA-values at this stage.
 
 ## 2. What is mean total number of steps taken per day?
 
@@ -75,25 +76,67 @@ meanVal <- mean(histData$steps)
 medianVal <- median(histData$steps)
 ```
 
-So **the Mean** = 1.07662 &times; 10<sup>4</sup> , **the Median** = 1.0765 &times; 10<sup>4</sup>  
+So **the Mean** = 1.0766 &times; 10<sup>4</sup> , **the Median** = 1.0765 &times; 10<sup>4</sup>  
 
 
 ## 3. What is the average daily activity pattern?
 
-The time series plot of the 5-minute intervals vs the average number of steps is very demonstrative:
+At first we must make some changes in prepared **intervalData**.
+What is 5-min interval's format?
 
 ```r
-plot(intervalData$steps  ~ intervalData$interval, type="l", main="Average Daily Activity Pattern", 
-     xlab="Time Intervals", ylab="Steps")
+head(intervalData$interval, 24)
+```
 
-stepMaxIntrvl <- intervalData$interval[which.max(intervalData$steps)]
+```
+##  [1]   0   5  10  15  20  25  30  35  40  45  50  55 100 105 110 115 120
+## [18] 125 130 135 140 145 150 155
+```
+We can see the interval values indeed have the format: **hours * 100 + minutes**. It's very comprehensive, but the values are not continuous. So to avoid any distortions in our plot and provide readable time format we need modify interval data.  
+1) Transform interval field to get **readable** time format. 
+
+```r
+intervalData$interval <- paste(sprintf("%02d", intervalData$interval %/% 100), 
+                               sprintf("%02d", intervalData$interval %% 100), sep = ":")
+```
+2) Add a field of **continuous** interval values:
+
+```r
+intervalData <- cbind(seq(1, nrow(intervalData)), intervalData)
+names(intervalData)[1] <- "interval.num"
+```
+Now we can look at the **intervalData**:
+
+```r
+head(intervalData)
+```
+
+```
+##   interval.num interval     steps
+## 1            1    00:00 1.7169811
+## 2            2    00:05 0.3396226
+## 3            3    00:10 0.1320755
+## 4            4    00:15 0.1509434
+## 5            5    00:20 0.0754717
+## 6            6    00:25 2.0943396
+```
+**intrval.num** is to be used to make continuous plot and **interval** to mark x-axis by readable time interval values.    
+The time series plot of the 5-minute intervals vs the average number of steps is very demonstrative.
+
+```r
+plot(intervalData$steps  ~ intervalData$interval.num, type="l", main="Average Daily Activity Pattern", 
+     xlab="Time Intervals", ylab="Steps", xaxt = "n") ## xaxt = "n" to suppress original x-axis
+ticks = seq(1, nrow(intervalData), 24) ## two hours intervals for new axis ticks
+axis(side = 1, at = ticks, labels = intervalData$interval[ticks]) ## new x-axis
+stepMaxIntrvl <- intervalData$interval.num[which.max(intervalData$steps)]
 abline(v=stepMaxIntrvl, col="red")
-text(900, y = 0, labels="835", col="red")
+text(stepMaxIntrvl+10, y = 0, 
+     labels=intervalData$interval[intervalData$interval.num == stepMaxIntrvl], col="red")
 ```
 
 ![plot of chunk time_series](figure/time_series-1.png) 
 
-The **835'th** 5-minute Interval contains the maximum number of steps. 
+The 5-minute Interval starting at **08:35**  contains the maximum number of steps = **206.17**
 
 ## 4. Imputing missing values
 
@@ -124,14 +167,19 @@ summary(actData)
 We can see it's the steps column only contains NAs.  
 So let's fill the NA cells with mean values for corresponding 5-minute intervals.  
 
-Primarily we must create set of NA raws ID (*naCells*):  
+Primarily we must 1) create set of NA raws ID (*naCells*):  
 
 
 ```r
 naCells <- which(is.na(actData$steps))
 fullActData <- actData
 ```
+2) Transform interval field of fullActData (it will set up the correspondence with intervalData and will be useful at any case):
 
+```r
+fullActData$interval <- paste(sprintf("%02d", fullActData$interval %/% 100), 
+                               sprintf("%02d", fullActData$interval %% 100), sep = ":")
+```
 
 Now we can use loop to substitute NA values with mean value from *intervalData* of the same intervals:
 
@@ -147,8 +195,8 @@ avrVals <- rep(intervalData$steps, times=61)
 fullActData <- cbind(actData, avrVals)
 fullActData$steps[naCells] <- fullActData$avrVals[naCells]
 ```
-The same results. At any cases we have new data set *fullActData* containing means interval values instead of NA.
-We plot the histogram based on this data set: 
+The same result. At any cases we have new data set **fullActData** containing means interval values instead of NA.
+Let's plot the histogram based on this data set:
 
 ```r
 histData <- aggregate(steps ~ date, data=fullActData, FUN=sum)
@@ -169,7 +217,7 @@ And we can see that imputing missing values make the median values of steps numb
 
 ## 5. Are there differences in activity patterns between weekdays and weekends?
 
-I need to set up standard locale for time formats
+Now I need to set up standard locale for time formats
 because the week days names in my locale have another names
 
 ```r
@@ -185,7 +233,7 @@ wDays <- gsub("Saturday|Sunday", replacement="weekend", wDays)
 wDays <- gsub("Monday|Tuesday|Wednesday|Thursday|Friday", replacement="weekday", wDays)
 ```
 
-Now return to native locale for time formats
+Return to native locale for time formats
 
 
 ```r
@@ -197,21 +245,32 @@ Set the data for weekends and weekdays:
 
 ```r
 fullActData <- cbind(fullActData, wDays)
-
 weekendData <- fullActData[fullActData$wDays == "weekend",]
 weekdayData <- fullActData[fullActData$wDays == "weekday",]
 weekendData <- aggregate(steps ~ interval, data=weekendData, FUN=mean)
 weekdayData <- aggregate(steps ~ interval, data=weekdayData, FUN=mean)
 ```
 
+
+Now again add a field of continuous values for intervals - *just add a copy of intervalData$interval.num values*:
+
+```r
+weekendData <- cbind(intervalData$interval.num, weekendData)
+weekdayData <- cbind(intervalData$interval.num, weekdayData)
+names(weekendData)[1] <- "interval.num"
+names(weekdayData)[1] <- "interval.num"
+```
 Plot the data:
 
 ```r
 op <- par(mfrow=c(2,1))
-plot(steps  ~ interval, data = weekendData, type="l", main="Average Daily Activity Pattern\n Weekends", 
-     xlab="Time intervals", ylab="Steps")
-plot(steps ~ interval, data = weekdayData, type="l", main="Weekdays", 
-     xlab="Time Intervals", ylab="Steps")
+ticks = seq(1, nrow(intervalData), 24) ## two hours intervals for new axis ticks
+plot(steps  ~ interval.num, data = weekendData, type="l", main="Average Daily Activity Pattern\n Weekends", 
+     xlab="Time intervals", ylab="Steps", xaxt = "n")
+axis(side = 1, at = ticks, labels = weekendData$interval[ticks]) ## new x-axis
+plot(steps ~ interval.num, data = weekdayData, type="l", main="Weekdays", 
+     xlab="Time Intervals", ylab="Steps", xaxt = "n")
+axis(side = 1, at = ticks, labels = weekdayData$interval[ticks]) ## new x-axis
 ```
 
 ![plot of chunk weekplot](figure/weekplot-1.png) 
@@ -221,6 +280,6 @@ par(op)
 ```
 
 So we can see  
-1. Weekdays activity max value is more then Weekend one (**230.3781971** vs **166.6391509**)  
-2. Nevertheless the mean value of Weekend activity is more then mean activity of Weekdays (**42.3664013** vs **35.6105812**)  
+1. Weekdays activity max value is more then Weekend one (**230.38** vs **166.64**)  
+2. Nevertheless the mean value of Weekend activity is more then mean activity of Weekdays (**42.37** vs **35.61**)  
 3. The most active intervals are approximately the same at weekdays or weekends. 
