@@ -174,7 +174,7 @@ Primarily we must 1) create set of NA raws ID (*naCells*):
 naCells <- which(is.na(actData$steps))
 fullActData <- actData
 ```
-2) Transform interval field of fullActData (it will set up the correspondence with intervalData and will be useful at any case):
+2) Transform interval field of fullActData (it will set up the correspondence with intervalData):
 
 ```r
 fullActData$interval <- paste(sprintf("%02d", fullActData$interval %/% 100), 
@@ -252,7 +252,14 @@ weekdayData <- aggregate(steps ~ interval, data=weekdayData, FUN=mean)
 ```
 
 
-Now again add a field of continuous values for intervals - *just add a copy of intervalData$interval.num values*:
+Now again 1) transform interval fiels - *just copy intervalData$interval values*:
+
+```r
+weekendData$interval <- intervalData$interval
+weekdayData$interval <- intervalData$interval
+```
+
+and 2) add a field of continuous values for intervals - *just add a copy of intervalData$interval.num values*:
 
 ```r
 weekendData <- cbind(intervalData$interval.num, weekendData)
@@ -264,12 +271,12 @@ Plot the data:
 
 ```r
 op <- par(mfrow=c(2,1))
-ticks = seq(1, nrow(intervalData), 24) ## two hours intervals for new axis ticks
+ticks = seq(1, nrow(weekdayData), 24) ## two hours intervals for new axis ticks
 plot(steps  ~ interval.num, data = weekendData, type="l", main="Average Daily Activity Pattern\n Weekends", 
-     xlab="Time intervals", ylab="Steps", xaxt = "n")
+     xlab="Time intervals", ylab="Steps", xaxt = "n") ## xaxt = "n" to suppress original x-axis
 axis(side = 1, at = ticks, labels = weekendData$interval[ticks]) ## new x-axis
 plot(steps ~ interval.num, data = weekdayData, type="l", main="Weekdays", 
-     xlab="Time Intervals", ylab="Steps", xaxt = "n")
+     xlab="Time Intervals", ylab="Steps", xaxt = "n") ## xaxt = "n" to suppress original x-axis
 axis(side = 1, at = ticks, labels = weekdayData$interval[ticks]) ## new x-axis
 ```
 
