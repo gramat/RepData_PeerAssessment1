@@ -12,8 +12,12 @@ The variables included in this dataset are:
 - date: The date on which the measurement was taken in YYYY-MM-DD format
 - interval: Identifier for the 5-minute interval in which measurement was taken
 
-The dataset is stored in a comma-separated-value (CSV) file and includes a total of 17,568 observations.
+The dataset is stored in a comma-separated-value (CSV) file and includes a total of 17,568 observations.  
 
+> This is third time I commit this assignment.  
+> First time I had to stop the course before I completed one. Just because of my business duties.  
+> Second time I was late to submit next assignment... I know I'am looser. But I'm very insistent looser.   
+> So I get this course once more. Third time is lucky! I hope...  
 
 ## 1. Loading and preprocessing the data
 
